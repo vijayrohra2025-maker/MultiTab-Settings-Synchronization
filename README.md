@@ -5,7 +5,9 @@ A small React + TypeScript application for choosing a theme, language, and readi
 ## Features
 
 - Light/dark appearance, English/Hindi/Spanish/French preview text, and 12–24 px reading size.
+- Quick presets for Balanced, Night focus, and Easy reading, plus a one-click reset.
 - Immediate cross-tab updates and persistence after reload.
+- Visible local save status and a live summary of the active preferences.
 - Validated storage, safe defaults, and timestamp + tab-ID last-write-wins ordering.
 - Responsive layout and a live preview.
 

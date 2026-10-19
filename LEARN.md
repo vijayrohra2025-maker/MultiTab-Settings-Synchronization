@@ -4,7 +4,7 @@ This guide describes the implementation in this folder. Read it beside the sourc
 
 ## Part 1: Project overview
 
-The app lets a person choose a light/dark theme, one of four languages, and a reading size from 12 to 24 pixels. It stores choices in this browser and sends changes to other open copies of the app. It demonstrates the original problem in simple words: “If I change a preference in one tab, keep my other tabs and the next visit consistent.”
+The app lets a person choose a light/dark theme, one of four languages, and a reading size from 12 to 24 pixels. It stores choices in this browser and sends changes to other open copies of the app. The dashboard also shows a live summary, reports whether settings were saved, offers three one-click preference presets, and has a reset button. It demonstrates the original problem in simple words: “If I change a preference in one tab, keep my other tabs and the next visit consistent.”
 
 The app satisfies the functional requirements with React state for the visible interface, `localStorage` for persistence, `BroadcastChannel` for fast same-origin tab messages, and the `storage` event when BroadcastChannel is unavailable. A stored value is validated before use. Each update carries a timestamp and per-tab ID; the greatest timestamp wins, then the lexicographically greater tab ID breaks a tie. Old and duplicate updates are ignored. A received winner is written to storage so replicas converge.
 
@@ -98,13 +98,13 @@ The imports provide React state/effects and the settings helpers/types. The `cop
 
 `createTabId()` combines current time and random characters. It is a lightweight identifier so equal-time edits have a deterministic tie-breaker. It is not a security credential.
 
-The `App` component first calls `useState` with a lazy initializer: it reads storage before rendering and chooses saved preferences when valid, otherwise defaults. That prevents a flash of the wrong theme/font. `settings` is the currently visible preference object. `currentUpdate` is a `useRef` holding the version used to reject stale messages; changing the ref does not trigger a render. `tabId` stays fixed for this tab's lifetime. `channelAvailable` controls the status label.
+The `App` component first calls `useState` with a lazy initializer: it reads storage before rendering and chooses saved preferences when valid, otherwise defaults. That prevents a flash of the wrong theme/font. `settings` is the currently visible preference object. `currentUpdate` is a `useRef` holding the version used to reject stale messages; changing the ref does not trigger a render. `tabId` stays fixed for this tab's lifetime. `channelAvailable` controls the connection label. `saveStatus` holds a short message such as “Loaded from this device,” “Saved on this device,” or “Storage unavailable.” The saved message is updated after successful localStorage writes; an error is caught and shown instead of crashing.
 
 The `useEffect` runs after the first render. It opens the named BroadcastChannel if supported, and registers `onmessage`. The handler validates incoming data before calling `acceptUpdate`. `acceptUpdate` compares an incoming update with current metadata, ignores old or duplicate messages, and for a winner updates state and writes the winner to localStorage. It does not broadcast that received update again, so messages cannot echo forever. The storage listener parses and validates the changed value and feeds it through the same acceptance rule. Cleanup closes the channel and removes the event listener when the component is removed.
 
 `updateSettings(changes)` merges the user's changed field(s) into the current settings, makes a fresh timestamped update, updates React immediately, saves it, then posts it to other tabs. Its timestamp is the greater of the current wall-clock time and the last timestamp this tab saw plus one, so its own new edit moves ahead even if the clock repeats or moves backward. It opens and closes a short-lived channel for each edit; the long-lived receiving channel remains open in the effect. `localStorage.setItem` can fail, so persistence failure is caught while the active tab remains usable. The storage fallback works when the browser lacks BroadcastChannel.
 
-The JSX returns the header, controls, live preview, and footer. The switch is a button with accessible switch semantics. The select changes language, and the range input converts its string value to a number. The root class changes for dark theme, and a CSS custom property carries the selected reading size into the preview. Removing the event listeners or channel close would leave resources attached longer than necessary.
+The JSX returns a header, live preference summary, settings controls, live preview, and footer. The summary cards show the current theme, language, and font size. The switch is a button with accessible switch semantics. The select changes language, and the range input converts its string value to a number. The three preset buttons call the same `updateSettings` function with a complete preference choice, so presets are saved and broadcast just like individual changes. The Reset button passes `DEFAULT_SETTINGS` through that same function. The root class changes for dark theme, and a CSS custom property carries the selected reading size into the preview. Removing the event listeners or channel close would leave resources attached longer than necessary.
 
 ### `src/styles.css`
 
@@ -170,18 +170,19 @@ During a running session, each tab's React state is its immediate display state,
 These are steps for you to perform; they are not claims that every browser scenario was automated.
 
 1. **Theme both directions:** open two tabs, toggle dark then light. Both should change without refresh.
-2. **Each language:** select English, Hindi, Spanish, French; the preview text and language label should change in each tab.
-3. **Font limits:** drag the slider to 12 and 24; value label and preview paragraph size should match.
-4. **Three tabs:** open three copies and change each control. All should converge to the latest accepted update.
-5. **Refresh:** change preferences, refresh one tab; it should start with the saved theme and values.
-6. **Close/reopen:** close tabs, reopen the same address; saved settings should return.
-7. **First-time initialization:** in DevTools Application/Storage, remove `multi-tab-settings-v1`, then reload. Expect light, English, 16 px.
-8. **Simultaneous edits:** make edits in two tabs nearly together. Expect every tab to settle on the update with greatest timestamp, then tab ID. Since millisecond timestamps are hard to force manually, repeated fast edits only approximate this case.
-9. **Stale/duplicate:** with DevTools, an old JSON update can be written to storage or sent in a message; a version at or below current must not replace the current UI. Malformed experiments should be done only after noting your saved value.
-10. **Corrupt data:** set the storage key to invalid JSON or an invalid object and reload. The page should start on defaults without crashing. Then change a setting to replace it with a valid update.
-11. **Fallback:** use a browser/test setup where `BroadcastChannel` is unavailable before app code runs. Storage event synchronization should still work; the header says “Storage sync mode.”
-12. **Mobile layout:** use DevTools responsive mode around 375 px wide. Settings and preview should stack without horizontal scrolling.
-13. **Console:** inspect DevTools Console during changes, reload, and tab sync. Expect no application errors.
+2. **Presets and reset:** click each Quick preset. Check the summary, controls, and preview update together. Click Reset; expect light, English, and 16 px.
+3. **Each language:** select English, Hindi, Spanish, French; the preview text and language label should change in each tab.
+4. **Font limits:** drag the slider to 12 and 24; value label and preview paragraph size should match.
+5. **Three tabs:** open three copies and change each control. All should converge to the latest accepted update.
+6. **Refresh:** change preferences, refresh one tab; it should start with the saved theme and values. The header should report that settings loaded from this device.
+7. **Close/reopen:** close tabs, reopen the same address; saved settings should return.
+8. **First-time initialization:** in DevTools Application/Storage, remove `multi-tab-settings-v1`, then reload. Expect light, English, 16 px.
+9. **Simultaneous edits:** make edits in two tabs nearly together. Expect every tab to settle on the update with greatest timestamp, then tab ID. Since millisecond timestamps are hard to force manually, repeated fast edits only approximate this case.
+10. **Stale/duplicate:** with DevTools, an old JSON update can be written to storage or sent in a message; a version at or below current must not replace the current UI. Malformed experiments should be done only after noting your saved value.
+11. **Corrupt data:** set the storage key to invalid JSON or an invalid object and reload. The page should start on defaults without crashing. Then change a setting to replace it with a valid update.
+12. **Fallback:** use a browser/test setup where `BroadcastChannel` is unavailable before app code runs. Storage event synchronization should still work; the header says “Storage sync mode.”
+13. **Mobile layout:** use DevTools responsive mode around 375 px wide. Settings and preview should stack without horizontal scrolling.
+14. **Console:** inspect DevTools Console during changes, reload, and tab sync. Expect no application errors.
 
 ## Part 9: Interview questions and answers
 

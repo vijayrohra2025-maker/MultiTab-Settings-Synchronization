@@ -22,6 +22,7 @@ export default function App() {
   const currentUpdate = useRef<SettingsUpdate>(initialUpdate);
   const [tabId] = useState(createTabId);
   const [channelAvailable, setChannelAvailable] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(initialUpdate.timestamp > 0 ? 'Loaded from this device' : 'Using starter settings');
 
   useEffect(() => {
     // Both tabs in the same origin can use this channel; storage is our fallback.
@@ -32,7 +33,10 @@ export default function App() {
       if (compareUpdates(update, currentUpdate.current) <= 0) return; // Ignore duplicates and stale messages.
       currentUpdate.current = update;
       setSettings(update.settings);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(update)); } catch { /* The live tab still works if storage is unavailable. */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(update));
+        setSaveStatus('Synced and saved');
+      } catch { setSaveStatus('Storage unavailable'); /* The live tab still works if storage is unavailable. */ }
     }
 
     if (channel) channel.onmessage = (event: MessageEvent<unknown>) => {
@@ -60,7 +64,10 @@ export default function App() {
     // A local edit becomes active immediately, then is saved and sent to peers.
     setSettings(nextUpdate.settings);
     currentUpdate.current = nextUpdate;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUpdate)); } catch { /* Sync in open tabs can still work without persistence. */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUpdate));
+      setSaveStatus('Saved on this device');
+    } catch { setSaveStatus('Storage unavailable'); /* Sync in open tabs can still work without persistence. */ }
     if (typeof BroadcastChannel !== 'undefined') {
       const channel = new BroadcastChannel('settings-sync-v1');
       channel.postMessage(nextUpdate);
@@ -71,14 +78,20 @@ export default function App() {
   const text = copy[settings.language];
   return (
     <main className={settings.darkMode ? 'app dark' : 'app'} style={{ '--reading-size': `${settings.fontSize}px` } as React.CSSProperties}>
-      <header className="topbar"><a className="brand" href="#top" aria-label="Settings Sync home"><span className="brand-mark">↗</span><span>sync<span className="brand-light">space</span></span></a><div className="live-status"><span className="live-dot" />{channelAvailable ? 'Live across your tabs' : 'Storage sync mode'}</div></header>
-      <section className="hero" id="top"><div className="eyebrow"><span className="eyebrow-line" /> A LITTLE MORE YOU</div><h1>One setting.<br /><span>Every tab.</span></h1><p className="hero-copy">Make your space feel right. Your preferences follow along, instantly, wherever you have this page open.</p><div className="tab-pills"><span className="pulse" /> Changes sync in real time <span className="pill-divider">·</span> Saved on this device</div></section>
+      <header className="topbar"><a className="brand" href="#top" aria-label="Settings Sync home"><span className="brand-mark">↗</span><span>sync<span className="brand-light">space</span></span></a><div className="header-right"><span className="save-status"><span className="save-icon">✓</span>{saveStatus}</span><div className="live-status"><span className="live-dot" />{channelAvailable ? 'Tabs connected' : 'Storage sync mode'}</div></div></header>
+      <section className="hero" id="top"><div className="eyebrow"><span className="eyebrow-line" /> YOUR SPACE, IN SYNC</div><h1>One setting.<br /><span>Every tab.</span></h1><p className="hero-copy">Make your space feel right. Your preferences follow along, instantly, wherever you have this page open.</p><div className="tab-pills"><span className="pulse" /> Changes sync in real time <span className="pill-divider">·</span> Saved in local storage</div></section>
+      <section className="quick-summary" aria-label="Current preference summary">
+        <div className="summary-card"><span className="summary-icon">◐</span><div><small>APPEARANCE</small><strong>{settings.darkMode ? 'Dark mode' : 'Light mode'}</strong></div><span className="summary-dot" /></div>
+        <div className="summary-card"><span className="summary-icon">文</span><div><small>LANGUAGE</small><strong>{text.name}</strong></div><span className="summary-dot" /></div>
+        <div className="summary-card"><span className="summary-icon">Aa</span><div><small>READING SIZE</small><strong>{settings.fontSize} pixels</strong></div><span className="summary-dot" /></div>
+      </section>
       <section className="settings-layout" aria-label="Settings and preview">
-        <div className="panel settings-panel"><div className="panel-heading"><div><div className="eyebrow small">YOUR PREFERENCES</div><h2>Make it yours</h2></div><span className="sliders-icon">☷</span></div>
+        <div className="panel settings-panel"><div className="panel-heading"><div><div className="eyebrow small">YOUR PREFERENCES</div><h2>Make it yours</h2><p className="panel-description">Personalize the way this page looks and reads.</p></div><button className="reset-button" type="button" onClick={() => updateSettings(DEFAULT_SETTINGS)}>Reset</button></div>
           <div className="setting-row"><div className="setting-label"><span className="setting-icon moon">☾</span><div><strong>Dark appearance</strong><small>Give your eyes a softer view</small></div></div><button className={`switch ${settings.darkMode ? 'on' : ''}`} type="button" role="switch" aria-checked={settings.darkMode} aria-label="Dark appearance" onClick={() => updateSettings({ darkMode: !settings.darkMode })}><span /></button></div>
           <div className="setting-row"><label className="setting-label" htmlFor="language"><span className="setting-icon language-icon">文</span><span><strong>Language</strong><small>Choose your preferred language</small></span></label><select id="language" value={settings.language} onChange={(event) => updateSettings({ language: event.target.value as Language })}>{Object.entries(copy).map(([code, item]) => <option value={code} key={code}>{item.name}</option>)}</select></div>
           <div className="setting-row font-row"><div className="setting-label"><span className="setting-icon type-icon">Aa</span><div><strong>Reading size</strong><small>Find your comfortable size</small></div></div><div className="font-control"><div className="font-values"><span>12 px</span><strong>{settings.fontSize} px</strong><span>24 px</span></div><input aria-label="Reading size" type="range" min="12" max="24" value={settings.fontSize} onChange={(event) => updateSettings({ fontSize: Number(event.target.value) })} /></div></div>
-          <div className="sync-note"><span>⌁</span><p><strong>Always in sync</strong><br />Open this page in another tab to see your changes travel.</p></div>
+          <div className="preset-section"><div className="preset-heading"><div><strong>Quick presets</strong><small>Switch your whole setup in one click</small></div><span>✦</span></div><div className="preset-list"><button type="button" onClick={() => updateSettings({ darkMode: false, language: 'en', fontSize: 16 })}><span className="preset-swatch balanced" /><span><strong>Balanced</strong><small>Light · 16 px</small></span><span className="preset-arrow">→</span></button><button type="button" onClick={() => updateSettings({ darkMode: true, language: 'en', fontSize: 18 })}><span className="preset-swatch focus" /><span><strong>Night focus</strong><small>Dark · 18 px</small></span><span className="preset-arrow">→</span></button><button type="button" onClick={() => updateSettings({ darkMode: false, language: 'en', fontSize: 20 })}><span className="preset-swatch reading" /><span><strong>Easy reading</strong><small>Light · 20 px</small></span><span className="preset-arrow">→</span></button></div></div>
+          <div className="sync-note"><span>⌁</span><p><strong>Saved between visits</strong><br />Your settings stay on this device, even after you close this page.</p></div>
         </div>
         <div className="preview-column"><div className="preview-caption"><span>LIVE PREVIEW</span><span className="preview-dot" /> updates as you edit</div><article className="preview-card"><div className="preview-top"><span className="preview-logo">s.</span><span className="preview-language">{text.name} <span>⌄</span></span></div><div className="preview-content"><span className="preview-tag">A FRESH START</span><h3>{text.title}</h3><p>{text.body}</p><button type="button" className="preview-button">Explore your space <span>→</span></button></div><div className="preview-footer"><span className="preview-avatar">S</span><span>{text.tip}</span></div></article><div className="preview-footnote"><span>✳</span> This preview reflects your current settings</div></div>
       </section>
