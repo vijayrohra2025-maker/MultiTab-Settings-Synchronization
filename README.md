@@ -1,15 +1,17 @@
 # Multi-Tab Settings Synchronization
 
-A TypeScript web app for changing appearance, language, and reading size. Preferences are saved in the browser and synchronized across open tabs running this same app.
+A TypeScript web app for changing appearance, language, and text size. Preferences are saved in the browser and synchronized across open tabs running this same app.
 
 **GitHub repository:** [vijayrohra2025-maker/MultiTab-Settings-Synchronization](https://github.com/vijayrohra2025-maker/MultiTab-Settings-Synchronization)
 
 ## Features
 
 - Light and dark appearance.
-- English, Hindi, Spanish, and French preview text.
-- Reading size from 12 px to 24 px.
+- English, Hindi, Spanish, French, and German settings and portal labels.
+- Text size from 12 px to 24 px.
 - Quick presets, a reset button, and a live preview.
+- A VTOP-style student portal at `/vtop-demo`, opened in a new tab by the **Open VTOP Demo** button.
+- English, Hindi, Spanish, French, and German labels in the settings and student portal.
 - Settings saved in `localStorage` and restored when the app is reopened.
 - Changes synchronized to other open tabs using `BroadcastChannel`, with a browser storage-event fallback.
 - Timestamp and tab-ID conflict handling for concurrent edits.
@@ -45,6 +47,10 @@ npm run dev
 Open the local URL printed in the terminal, usually `http://localhost:5173`.
 
 To try multi-tab synchronization, open that same URL in two or more tabs in the same browser. Change a setting in one tab; the other tabs running this app should update without refreshing.
+
+Set dark mode, language, and text size on the settings page, then click **Open VTOP Demo**. The portal opens in a separate tab with the saved preferences. Leave both tabs open and change the settings; the portal updates without refreshing. The portal uses fictional student information only.
+
+To check synchronization, set dark mode, Hindi, and 22 px before opening the demo. Confirm the portal starts with those settings. Then switch the settings page to light mode, 14 px, and English; the already-open portal should update without a refresh. You can open more than one VTOP demo tab to confirm they all receive changes. Close and reopen the settings page to confirm preferences persist.
 
 ## Check and build
 

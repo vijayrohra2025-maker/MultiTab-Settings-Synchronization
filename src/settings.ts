@@ -1,4 +1,4 @@
-export type Language = 'en' | 'hi' | 'es' | 'fr';
+export type Language = 'en' | 'hi' | 'es' | 'fr' | 'de';
 export interface Settings { darkMode: boolean; language: Language; fontSize: number; }
 export interface SettingsUpdate { settings: Settings; timestamp: number; tabId: string; }
 export const STORAGE_KEY = 'multi-tab-settings-v1';
@@ -8,7 +8,7 @@ export function isSettings(value: unknown): value is Settings {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Record<string, unknown>;
   return typeof candidate.darkMode === 'boolean'
-    && (candidate.language === 'en' || candidate.language === 'hi' || candidate.language === 'es' || candidate.language === 'fr')
+    && (candidate.language === 'en' || candidate.language === 'hi' || candidate.language === 'es' || candidate.language === 'fr' || candidate.language === 'de')
     && typeof candidate.fontSize === 'number' && Number.isFinite(candidate.fontSize)
     && candidate.fontSize >= 12 && candidate.fontSize <= 24;
 }
