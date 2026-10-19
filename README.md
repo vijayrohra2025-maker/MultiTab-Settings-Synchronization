@@ -22,8 +22,6 @@ npm run dev
 
 Open the local URL Vite prints in two or more tabs. Change a control in one tab and watch the others update. To make a production build, run `npm run build`; `npm run typecheck` checks TypeScript without emitting files. `npm run preview` serves a built version locally.
 
-See [LEARN.md](./LEARN.md) for the complete beginner's guide, code walkthrough, manual test checklist, and interview preparation.
-
 ## Limitations
 
 This coordinates tabs on the same browser origin and device. It does not synchronize separate devices or browsers. Timestamp ordering is simple and deterministic but depends on the local clock; it is not a distributed database protocol. Browser storage can be disabled or cleared. Google Fonts are optional network-loaded styling; the system fallback fonts still work offline.
